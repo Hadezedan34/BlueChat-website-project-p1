@@ -1,0 +1,9 @@
+@import "tailwindcss";
+/* globals.css */
+body {
+  background-image: radial-gradient(#1a202c 0.5px, transparent 0.5px);
+  background-size: 24px 24px;
+}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
