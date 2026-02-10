@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
-  throw new Error("يرجى تعريف متغير MONGODB_URI داخل Environment Variables");
+  console.error("فشل الاتصال - الرابط المستخدم هو:", process.env.MONGODB_URI?.substring(0, 15) + "...");
 }
 
 export const connectDB = async () => {
