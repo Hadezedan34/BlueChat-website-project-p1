@@ -1,15 +1,19 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
-const connectDB = async () => {
-  if (mongoose.connections[0].readyState) return;
-  
+if (!MONGODB_URI) {
+  throw new Error("يرجى تعريف متغير MONGODB_URI داخل Environment Variables");
+}
+
+export const connectDB = async () => {
   try {
-    await mongoose.connect(MONGODB_URI as string);
-    console.log("تم الاتصال بـ MongoDB بنجاح! ✅");
+    if (mongoose.connection.readyState >= 1) return;
+    await mongoose.connect(MONGODB_URI);
+    console.log("Connected to MongoDB ✅");
   } catch (error) {
     console.error("فشل الاتصال بالقاعدة: ❌", error);
+    throw error;
   }
 };
 
