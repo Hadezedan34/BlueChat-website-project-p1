@@ -1,15 +1,18 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation'; // 1. استيراد الموجه
+import { useRouter } from 'next/navigation';
 
 export default function SignUpPage() {
   const [formData, setFormData] = useState({ username: '', email: '', password: '' });
   const [loading, setLoading] = useState(false);
-  const router = useRouter(); // 2. تعريف الموجه
+  const [agreeToLocation, setAgreeToLocation] = useState(false); // الحالة الجديدة للموافقة
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!agreeToLocation) return; // منع الإرسال إذا لم يتم التحديد
+
     setLoading(true);
     try {
       const res = await fetch('/api/auth/signup', {
@@ -21,10 +24,7 @@ export default function SignUpPage() {
       const data = await res.json();
 
       if (res.ok) {
-        // 3. النجاح: التوجه لصفحة success
         router.push('/success');
-
-        // 4. الانتظار 3 ثوانٍ ثم التوجه لـ login
         setTimeout(() => {
           router.push('/login');
         }, 3000);
@@ -55,7 +55,7 @@ export default function SignUpPage() {
             <h2 className="text-4xl font-black tracking-tighter mb-2 italic">
               Blue<span className="text-[#5288c1]">Chat</span>
             </h2>
-            <p className="text-gray-500 text-sm font-light">أنشئ حسابك وانضم إلى فضاء الخصوصية</p>
+            <p className="text-gray-500 text-sm font-light">أنشئ حسابك وانضم إلى فضاء جديد</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -92,10 +92,31 @@ export default function SignUpPage() {
               />
             </div>
 
+            {/* الإضافة الجديدة: الموافقة على الموقع بنفس ستايلك */}
+            <div 
+              className="flex items-center gap-3 px-2 py-2 cursor-pointer select-none group"
+              onClick={() => setAgreeToLocation(!agreeToLocation)}
+            >
+              <div className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-all duration-300 ${agreeToLocation ? 'bg-[#5288c1] border-[#5288c1] shadow-[0_0_10px_rgba(82,136,193,0.3)]' : 'border-white/10 bg-white/5'}`}>
+                {agreeToLocation && (
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                )}
+              </div>
+              <span className="text-[11px] text-gray-500 font-medium group-hover:text-gray-300 transition-colors">
+                أوافق على مشاركة موقعي الجغرافي على الخريطة
+              </span>
+            </div>
+
             <button 
               type="submit" 
-              disabled={loading}
-              className={`w-full bg-[#5288c1] hover:bg-[#6499d3] text-white font-bold py-4 rounded-2xl transition-all shadow-[0_0_20px_rgba(82,136,193,0.3)] active:scale-95 mt-6 flex items-center justify-center gap-2 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+              disabled={loading || !agreeToLocation}
+              className={`w-full font-bold py-4 rounded-2xl transition-all mt-4 flex items-center justify-center gap-2 ${
+                agreeToLocation && !loading
+                ? 'bg-[#5288c1] hover:bg-[#6499d3] text-white shadow-[0_0_20px_rgba(82,136,193,0.3)] active:scale-95' 
+                : 'bg-white/5 text-gray-600 border border-white/5 cursor-not-allowed'
+              }`}
             >
               {loading ? (
                 <>

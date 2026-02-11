@@ -5,7 +5,18 @@ const UserSchema = new Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   friendRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-  friends: { type: [Schema.Types.ObjectId], ref: "User", default: [] }
+  image: { type: String, default: "" },
+  location: {
+    lat: Number,
+    lng: Number,
+    lastSeen: Date
+  },
+  friends: { type: [Schema.Types.ObjectId], ref: "User", default: [] },
+  isGhostMode: { 
+    type: Boolean, 
+    default: false // الوضع الافتراضي أن الموقع ظاهر
+  }
+  
 }, { timestamps: true });
 
 // الحركة هي بتخلي Next.js ينسى أي نسخة قديمة من الموديل

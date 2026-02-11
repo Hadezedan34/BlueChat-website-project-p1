@@ -17,9 +17,9 @@ export default function Home() {
         </h1>
         
         <p className="text-gray-400 text-base md:text-xl leading-relaxed font-light px-2">
-          تواصل بروح جديدة، في فضاء يحترم خصوصيتك.
+        ابنِ روابطك الحقيقية، وكن جزءاً من نبض الخريطة العالمي 
           <span className="block mt-2 italic text-gray-500 font-serif text-sm md:text-lg">
-            "كانت الأرحام أوطاننا.. فاغتربنا عنها بالولادة"
+            Your Map, Your People, Your Private Space for Real-Time Connection
           </span>
         </p>
 
