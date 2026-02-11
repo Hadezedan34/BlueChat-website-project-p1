@@ -1,6 +1,8 @@
-'use client';
+"use client";
+
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { pusherClient } from '@/lib/pusher';
 
 const Icons = {
   Search: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" x2="16.65" y2="16.65"></line></svg>,
@@ -21,10 +23,11 @@ export default function LuxuryDashboard() {
   const [sentRequests, setSentRequests] = useState<string[]>([]);
   const [toast, setToast] = useState<{show: boolean, msg: string}>({show: false, msg: ''});
 
-  // Messaging States
   const [selectedFriend, setSelectedFriend] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState("");
+  const [unreadFriends, setUnreadFriends] = useState<string[]>([]);
+  const [isTyping, setIsTyping] = useState<string | null>(null);
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
 
   const fetchLatestUserData = async () => {
@@ -40,7 +43,56 @@ export default function LuxuryDashboard() {
 
   useEffect(() => { fetchLatestUserData(); }, []);
 
-  // Search Logic
+  // --- Pusher Radar ---
+  useEffect(() => {
+    const myId = user?._id || user?.id;
+    if (!myId) return;
+
+    const channel = pusherClient.subscribe(`user-${myId.toString()}`);
+
+    // استلام الرسائل
+    channel.bind('new-message', async (data: { sender: string }) => {
+      if (selectedFriend?._id === data.sender || selectedFriend?.id === data.sender) {
+        const res = await fetch(`/api/messages?sender=${myId}&receiver=${data.sender}`);
+        const latestMsgs = await res.json().catch(() => []);
+        setMessages(latestMsgs);
+        new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3').play().catch(() => {});
+      } else {
+        setUnreadFriends(prev => [...new Set([...prev, data.sender])]);
+        new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3').play().catch(() => {});
+      }
+    });
+
+    // استلام إشارة "جاري الكتابة"
+    channel.bind('typing', (data: { sender: string }) => {
+      if (selectedFriend?._id === data.sender || selectedFriend?.id === data.sender) {
+        setIsTyping(data.sender);
+        setTimeout(() => setIsTyping(null), 3000);
+      }
+    });
+
+    return () => { pusherClient.unsubscribe(`user-${myId.toString()}`); };
+  }, [user?._id, user?.id, selectedFriend?._id, selectedFriend?.id]);
+
+  useEffect(() => {
+    if (selectedFriend?._id || selectedFriend?.id) {
+      const friendId = selectedFriend._id || selectedFriend.id;
+      setUnreadFriends(prev => prev.filter(id => id !== friendId));
+    }
+  }, [selectedFriend]);
+
+  // Typing Sender Logic
+  const handleTyping = async () => {
+    const myId = user?._id || user?.id;
+    const friendId = selectedFriend?._id || selectedFriend?.id;
+    if (!myId || !friendId) return;
+    fetch('/api/messages/typing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sender: myId, receiver: friendId }),
+    }).catch(() => {});
+  };
+
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
       if (searchQuery.trim().length > 2) {
@@ -54,36 +106,51 @@ export default function LuxuryDashboard() {
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery]);
 
-  // Messages Refresh Logic
   useEffect(() => {
-    let interval: any;
     const getMsgs = async () => {
-      if (selectedFriend?._id && user?._id) {
-        const res = await fetch(`/api/messages?sender=${user._id}&receiver=${selectedFriend._id}`);
-        const data = await res.json();
-        setMessages(Array.isArray(data) ? data : []);
+      if ((selectedFriend?._id || selectedFriend?.id) && (user?._id || user?.id)) {
+        try {
+          const res = await fetch(`/api/messages?sender=${user._id || user.id}&receiver=${selectedFriend._id || selectedFriend.id}`);
+          if (!res.ok) return;
+          const data = await res.json().catch(() => []);
+          setMessages(Array.isArray(data) ? data : []);
+        } catch (err) { console.error(err); }
       }
     };
-    if (selectedFriend) {
-      getMsgs();
-      interval = setInterval(getMsgs, 3000);
-    }
-    return () => clearInterval(interval);
-  }, [selectedFriend?._id, user?._id]);
+    if (selectedFriend) getMsgs();
+  }, [selectedFriend?._id, selectedFriend?.id, user?._id, user?.id]);
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedFriend || !user) return;
-    const res = await fetch('/api/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sender: user._id, receiver: selectedFriend._id, text: newMessage }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setMessages(prev => [...prev, data]);
-      setNewMessage("");
+    const tempId = Date.now().toString();
+    const msgText = newMessage;
+    const optimisticMsg = {
+      _id: tempId,
+      sender: user._id || user.id,
+      receiver: selectedFriend._id || selectedFriend.id,
+      text: msgText,
+      createdAt: new Date().toISOString(),
+    };
+    setMessages(prev => [...prev, optimisticMsg]);
+    setNewMessage("");
+    try {
+      const res = await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          sender: user._id || user.id, 
+          receiver: selectedFriend._id || selectedFriend.id, 
+          text: msgText 
+        }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      const realMsg = await res.json();
+      setMessages(prev => prev.map(m => m._id === tempId ? realMsg : m));
+    } catch (err) {
+      setMessages(prev => prev.filter(m => m._id !== tempId));
+      alert("Failed!");
     }
   };
 
@@ -124,8 +191,6 @@ export default function LuxuryDashboard() {
 
   return (
     <div className="min-h-screen bg-[#020406] text-slate-200 font-sans flex items-center justify-center p-4 relative overflow-hidden">
-      
-      {/* Toast */}
       {toast.show && (
         <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[300] bg-[#3390ec] text-white px-8 py-4 rounded-2xl shadow-[0_0_50px_rgba(51,144,236,0.5)] font-bold border border-white/20 backdrop-blur-md animate-bounce">
           {toast.msg}
@@ -174,12 +239,19 @@ export default function LuxuryDashboard() {
 
             <p className="text-[10px] font-black text-slate-500 uppercase px-4 mb-3 tracking-[0.2em]">Friend Network</p>
             {user.friends?.length > 0 ? user.friends.map((f: any) => (
-              <div key={f._id} onClick={() => { setSelectedFriend(f); setMessages([]); }} className={`p-4 rounded-3xl flex items-center gap-4 transition-all cursor-pointer border ${selectedFriend?._id === f._id ? 'bg-[#3390ec]/10 border-[#3390ec]/30' : 'border-transparent hover:bg-white/5'}`}>
+              <div 
+                key={f._id} 
+                onClick={() => { setSelectedFriend(f); setMessages([]); }} 
+                className={`p-4 rounded-3xl flex items-center gap-4 transition-all cursor-pointer border relative ${selectedFriend?._id === f._id ? 'bg-[#3390ec]/10 border-[#3390ec]/30' : 'border-transparent hover:bg-white/5'}`}
+              >
                 <div className="w-11 h-11 rounded-2xl bg-[#3390ec]/10 flex items-center justify-center text-[#3390ec] font-black">{f.username?.[0].toUpperCase()}</div>
-                <div className="hidden md:block">
+                <div className="hidden md:block flex-1">
                   <p className="text-sm font-bold tracking-tight">{f.username}</p>
                   <p className="text-[9px] text-green-500 font-bold uppercase tracking-widest">Online</p>
                 </div>
+                {unreadFriends.includes(f._id) && (
+                  <div className="w-2.5 h-2.5 bg-[#3390ec] rounded-full shadow-[0_0_10px_#3390ec] animate-pulse absolute right-4"></div>
+                )}
               </div>
             )) : <p className="text-center text-[10px] text-slate-600 font-bold py-8 italic tracking-widest">No Signals Detected</p>}
           </div>
@@ -194,9 +266,15 @@ export default function LuxuryDashboard() {
         {/* Main Area */}
         <main className="flex-1 flex flex-col bg-white/[0.01]">
           <header className="px-10 py-8 flex items-center justify-between border-b border-white/5">
-            <div className="flex items-center gap-4">
-              <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse shadow-[0_0_12px_#22c55e]"></div>
-              <h2 className="font-black text-xs tracking-[0.3em] uppercase opacity-70">{selectedFriend ? `Comms: ${selectedFriend.username}` : "Command Center"}</h2>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-4">
+                <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse shadow-[0_0_12px_#22c55e]"></div>
+                <h2 className="font-black text-xs tracking-[0.3em] uppercase opacity-70">{selectedFriend ? `Comms: ${selectedFriend.username}` : "Command Center"}</h2>
+              </div>
+              {/* نص جاري الكتابة */}
+              {isTyping === (selectedFriend?._id || selectedFriend?.id) && (
+                <p className="text-[10px] text-[#3390ec] italic font-bold mt-1 animate-pulse tracking-widest">Typing...</p>
+              )}
             </div>
 
             <div className="flex items-center gap-6">
@@ -232,9 +310,9 @@ export default function LuxuryDashboard() {
               <>
                 <div className="flex-1 overflow-y-auto p-10 space-y-6 flex flex-col custom-scrollbar bg-[radial-gradient(circle_at_center,rgba(51,144,236,0.03)_0%,transparent_100%)]">
                   {messages.map((m: any, idx: number) => {
-                    const isMe = m.sender === user._id || m.sender === user.id;
+                    const isMe = m.sender === (user._id || user.id);
                     return (
-                      <div key={m._id || idx} className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'}`}>
+                      <div key={`${m._id || idx}-${idx}`} className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'}`}>
                         <div className={`relative max-w-[75%] p-4 shadow-xl ${isMe ? 'bg-[#3390ec] text-white rounded-[1.8rem] rounded-tr-none' : 'bg-white/10 border border-white/5 text-slate-200 rounded-[1.8rem] rounded-tl-none'}`}>
                           <p className="text-sm leading-relaxed">{m.text}</p>
                           <div className={`text-[8px] mt-2 opacity-40 font-black flex gap-1 ${isMe ? 'justify-end' : 'justify-start'}`}>
@@ -249,7 +327,16 @@ export default function LuxuryDashboard() {
                 </div>
                 <div className="p-8 bg-[#0a0c10]/80 backdrop-blur-xl border-t border-white/5">
                   <div className="flex gap-4 bg-white/5 p-2 rounded-full border border-white/10 focus-within:border-[#3390ec]/50 transition-all max-w-4xl mx-auto w-full">
-                    <input value={newMessage} onChange={e => setNewMessage(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendMessage()} placeholder="Type encrypted message..." className="flex-1 bg-transparent border-none outline-none px-6 py-3 text-sm text-white" />
+                    <input 
+                      value={newMessage} 
+                      onChange={e => {
+                        setNewMessage(e.target.value);
+                        handleTyping();
+                      }} 
+                      onKeyDown={e => e.key === 'Enter' && handleSendMessage()} 
+                      placeholder="Type encrypted message..." 
+                      className="flex-1 bg-transparent border-none outline-none px-6 py-3 text-sm text-white" 
+                    />
                     <button onClick={handleSendMessage} className="w-12 h-12 bg-[#3390ec] rounded-full flex items-center justify-center text-white shadow-lg shadow-[#3390ec]/20 hover:scale-105 transition-transform active:scale-95"><Icons.Send /></button>
                   </div>
                 </div>

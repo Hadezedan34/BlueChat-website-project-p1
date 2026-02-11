@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Message from '@/lib/models/message';
+import { pusherServer } from '@/lib/pusher';
 
 // 1. جلب الرسائل (الكود تبعك)
 export async function GET(req: Request) {
@@ -44,7 +45,9 @@ export async function POST(req: Request) {
       text,
       createdAt: new Date()
     });
-
+ await pusherServer.trigger(`user-${receiver}`, "new-message", { 
+        sender: sender.toString()
+    });
     return NextResponse.json(newMessage);
   } catch (err) {
     console.error("POST Error:", err);
