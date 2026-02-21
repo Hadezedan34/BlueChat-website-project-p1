@@ -84,7 +84,7 @@ export default function SettingsPage() {
     setGhostMode(newStatus);
 
     try {
-        // نستخدم المسار الجديد والبسيط اللي اتفقنا عليه
+      
         const res = await fetch(`/api/users/${userId}/settings`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },

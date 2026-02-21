@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { pusherClient } from '@/lib/pusher';
 import Link from 'next/link';
+import { useIsMobile } from '@/app/hooks/useIsMobile';
 
 const Icons = {
   Search: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" x2="16.65" y2="16.65"></line></svg>,
@@ -14,10 +15,18 @@ const Icons = {
   Users: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>,
   Send: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>,
   Settings: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>,
-  Paperclip: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+  Paperclip: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>,
+  Chat: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>,
+  MapPin: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>,
+  ArrowLeft: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>,
+  UserPlus: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
 };
 
 export default function LuxuryDashboard() {
+  const isMobile = useIsMobile();
+  const [mobileTab, setMobileTab] = useState<'chats' | 'friends' | 'map'>('chats');
+  const [showMobileSearch, setShowMobileSearch] = useState(false);
+  
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -227,6 +236,175 @@ export default function LuxuryDashboard() {
 
   if (!user) return <div className="min-h-screen bg-[#020406] flex items-center justify-center text-[#3390ec] font-black italic animate-pulse tracking-[0.5em]">INITIALIZING...</div>;
 
+  // Mobile View
+  if (isMobile) {
+    return (
+      <div className="min-h-screen bg-[#020406] text-slate-200 font-sans flex flex-col relative overflow-hidden">
+        {toast.show && (
+          <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[300] bg-[#3390ec] text-white px-8 py-4 rounded-2xl shadow-[0_0_50px_rgba(51,144,236,0.5)] font-bold border border-white/20 backdrop-blur-md animate-bounce">
+            {toast.msg}
+          </div>
+        )}
+
+        {/* Mobile Header */}
+        <header className="px-4 py-4 flex items-center justify-between border-b border-white/5 bg-[#0a0c10]/90 backdrop-blur-xl z-20">
+          {selectedFriend ? (
+            <div className="flex items-center gap-3">
+              <button onClick={() => setSelectedFriend(null)} className="p-2 hover:bg-white/5 rounded-xl transition-colors">
+                <Icons.ArrowLeft />
+              </button>
+              <div className="w-10 h-10 rounded-xl bg-[#3390ec]/20 flex items-center justify-center text-[#3390ec] font-black overflow-hidden border border-[#3390ec]/20">
+                {selectedFriend.image ? <img src={selectedFriend.image} className="w-full h-full object-cover" alt="" /> : selectedFriend.username?.[0].toUpperCase()}
+              </div>
+              <div>
+                <p className="text-sm font-bold">{selectedFriend.username}</p>
+                {isTyping === (selectedFriend?._id || selectedFriend?.id) && (
+                  <p className="text-[10px] text-[#3390ec] italic animate-pulse">Typing...</p>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-[#3390ec] to-[#1c64b0] rounded-xl flex items-center justify-center font-black text-white">B</div>
+              <h1 className="font-black text-lg tracking-tight uppercase italic">BlueChat</h1>
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            {!selectedFriend && (
+              <button onClick={() => setShowMobileSearch(!showMobileSearch)} className="p-2 text-slate-400 hover:text-[#3390ec] transition-colors">
+                <Icons.Search />
+              </button>
+            )}
+            <button onClick={() => setShowNotifications(!showNotifications)} className="p-2 text-slate-400 hover:text-[#3390ec] transition-colors relative">
+              <Icons.Bell />
+              {user.friendRequests?.length > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#3390ec] text-[9px] font-black text-white flex items-center justify-center rounded-full">{user.friendRequests.length}</span>}
+            </button>
+          </div>
+        </header>
+
+        {/* Mobile Search */}
+        {showMobileSearch && !selectedFriend && (
+          <div className="px-4 py-3 bg-[#0a0c10]/90 border-b border-white/5">
+            <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} type="text" placeholder="Search..." className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-2 text-sm outline-none focus:border-[#3390ec]/50" />
+          </div>
+        )}
+
+        {/* Mobile Notifications */}
+        {showNotifications && (
+          <div className="absolute top-16 left-4 right-4 bg-[#0f1115] border border-white/10 rounded-2xl p-4 z-50 backdrop-blur-2xl">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Requests</p>
+            {user.friendRequests?.map((req: any) => (
+              <div key={req._id} className="flex items-center justify-between bg-white/5 p-3 rounded-xl mb-2">
+                <span className="text-xs font-bold">{req.username}</span>
+                <button onClick={() => handleAcceptFriend(req._id)} className="bg-[#3390ec] text-white text-[9px] px-3 py-1.5 rounded-lg font-black">ACCEPT</button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Mobile Content */}
+        <div className="flex-1 overflow-hidden flex flex-col">
+          {selectedFriend ? (
+            <>
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {messages.map((m: any, idx: number) => {
+                  const isMe = m.sender === (user._id || user.id);
+                  const isImg = isImageUrl(m.text || "");
+                  return (
+                    <div key={`${m._id || idx}-${idx}`} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`max-w-[80%] ${isMe ? 'bg-[#3390ec] text-white rounded-2xl rounded-tr-none' : 'bg-white/10 border border-white/5 text-slate-200 rounded-2xl rounded-tl-none'} p-3`}>
+                        {isImg ? (
+                          <img src={m.text} alt="" className="max-h-[200px] rounded-xl object-cover" onClick={() => window.open(m.text, '_blank')} />
+                        ) : (
+                          <p className="text-sm">{m.text}</p>
+                        )}
+                        <p className="text-[8px] mt-1 opacity-50">{new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+                <div ref={messagesEndRef} />
+              </div>
+              {imagePreview && (
+                <div className="absolute bottom-20 left-4 right-4 bg-[#0f1115]/90 backdrop-blur-2xl border border-[#3390ec]/30 p-3 rounded-2xl z-50 flex items-center gap-3">
+                  <img src={imagePreview} alt="Preview" className="w-16 h-16 rounded-lg object-cover" />
+                  <div className="flex-1">
+                    <button onClick={confirmAndSendImage} className="w-full bg-[#3390ec] text-white py-2 rounded-lg font-black text-xs">SEND</button>
+                  </div>
+                  <button onClick={() => { setImagePreview(null); setImageFile(null); }} className="p-1">✕</button>
+                </div>
+              )}
+              <div className="p-3 bg-[#0a0c10]/90 border-t border-white/5">
+                <div className="flex items-center gap-2 bg-white/5 p-2 rounded-full">
+                  <label className="p-2 text-slate-400 cursor-pointer">
+                    <input type="file" accept="image/*" className="hidden" onChange={handleImageSelect} disabled={isUploading} />
+                    <Icons.Paperclip />
+                  </label>
+                  <input value={newMessage} onChange={e => { setNewMessage(e.target.value); handleTyping(); }} onKeyDown={e => e.key === 'Enter' && handleSendMessage()} placeholder="Message..." className="flex-1 bg-transparent border-none outline-none px-2 py-2 text-sm" disabled={isUploading} />
+                  <button onClick={() => handleSendMessage()} className="w-10 h-10 bg-[#3390ec] rounded-full flex items-center justify-center" disabled={isUploading}>
+                    <Icons.Send />
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              {searchResults.length > 0 && searchQuery.length > 2 && (
+                <div className="mb-4">
+                  <p className="text-[10px] font-black text-[#3390ec] uppercase mb-2">Found</p>
+                  {searchResults.map(res => (
+                    <div key={res._id} className="p-3 bg-[#3390ec]/5 rounded-xl flex items-center justify-between mb-2">
+                      <span className="text-sm font-bold">{res.username}</span>
+                      <button onClick={() => handleAddFriend(res._id)} className="p-2 bg-[#3390ec]/20 text-[#3390ec] rounded-lg">
+                        {sentRequests.includes(res._id) ? <Icons.Check /> : <Icons.Plus />}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <p className="text-[10px] font-black text-slate-500 uppercase mb-2">Friends</p>
+              {user.friends?.length > 0 ? user.friends.map((f: any) => (
+                <div key={f._id} onClick={() => { setSelectedFriend(f); setMessages([]); }} className="p-3 bg-white/5 rounded-xl flex items-center gap-3 cursor-pointer">
+                  <div className="w-10 h-10 rounded-xl bg-[#3390ec]/20 flex items-center justify-center text-[#3390ec] font-black overflow-hidden">
+                    {f.image ? <img src={f.image} className="w-full h-full object-cover" alt="" /> : f.username?.[0].toUpperCase()}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-bold">{f.username}</p>
+                    <p className="text-[10px] text-green-500">Online</p>
+                  </div>
+                  {unreadFriends.includes(f._id) && <div className="w-2 h-2 bg-[#3390ec] rounded-full"></div>}
+                </div>
+              )) : <p className="text-center text-slate-600 text-xs py-8">No friends yet</p>}
+            </div>
+          )}
+        </div>
+
+        {/* Mobile Bottom Nav */}
+        {!selectedFriend && (
+          <div className="flex items-center justify-around p-3 border-t border-white/5 bg-[#0a0c10]/90 backdrop-blur-xl">
+            <button onClick={() => setMobileTab('chats')} className={`flex flex-col items-center gap-1 p-2 ${mobileTab === 'chats' ? 'text-[#3390ec]' : 'text-slate-500'}`}>
+              <Icons.Chat />
+              <span className="text-[10px] font-bold">Chats</span>
+            </button>
+            <button onClick={() => setMobileTab('friends')} className={`flex flex-col items-center gap-1 p-2 ${mobileTab === 'friends' ? 'text-[#3390ec]' : 'text-slate-500'}`}>
+              <Icons.Users />
+              <span className="text-[10px] font-bold">Friends</span>
+            </button>
+            <Link href="/map" className="flex flex-col items-center gap-1 p-2 text-slate-500">
+              <Icons.MapPin />
+              <span className="text-[10px] font-bold">Map</span>
+            </Link>
+            <Link href="/user-information" className="flex flex-col items-center gap-1 p-2 text-slate-500">
+              <Icons.Settings />
+              <span className="text-[10px] font-bold">Settings</span>
+            </Link>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Desktop View (Original)
   return (
     <div className="min-h-screen bg-[#020406] text-slate-200 font-sans flex items-center justify-center p-4 relative overflow-hidden">
       {toast.show && (
@@ -247,18 +425,11 @@ export default function LuxuryDashboard() {
       {/* --- Earth Orbit Button --- */}
       <Link href="/map" className="absolute top-10 right-10 z-50 group flex flex-col items-center gap-3">
         <div className="relative w-16 h-16 flex items-center justify-center">
-          {/* Outer Glow */}
           <div className="absolute inset-0 bg-[#3390ec]/20 rounded-full blur-xl group-hover:bg-[#3390ec]/40 transition-all duration-700 animate-pulse"></div>
-          
-          {/* Earth Body */}
           <div className="relative w-12 h-12 rounded-full overflow-hidden shadow-[inset_-6px_-6px_15px_rgba(0,0,0,0.9),0_0_20px_rgba(51,144,236,0.4)] border border-[#3390ec]/30 animate-[spin_25s_linear_infinite]">
-            {/* Texture & Gradient */}
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,#3390ec_0%,#0a0c10_80%)] opacity-90"></div>
-            {/* Grid Overlay */}
             <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/grid-me-dot.png')]"></div>
           </div>
-          
-          {/* Orbit Ring (Optional decorative touch) */}
           <div className="absolute w-[140%] h-[140%] border border-[#3390ec]/10 rounded-full group-hover:border-[#3390ec]/30 transition-colors duration-700"></div>
         </div>
         <span className="text-[7px] font-black text-[#3390ec] tracking-[0.4em] uppercase opacity-40 group-hover:opacity-100 transition-all duration-500 italic">Global Satellite</span>
