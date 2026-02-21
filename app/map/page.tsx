@@ -16,19 +16,14 @@ export default function GlobalExplorersMap() {
   const [explorers, setExplorers] = useState<any[]>([]);
   const [sentRequests, setSentRequests] = useState<string[]>([]);
   const [L, setL] = useState<any>(null);
+  const [showExplorersPanel, setShowExplorersPanel] = useState(true);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('user');
     if (savedUser) setUser(JSON.parse(savedUser));
     import('leaflet').then(leaflet => setL(leaflet));
   }, []);
-{explorers
-  .filter(exp => !exp.isGhostMode) // فلترة إضافية في الـ Frontend للأمان
-  .map((explorer) => (
-    <Marker key={explorer._id} position={[explorer.location.lat, explorer.location.lng]}>
-       {/* ... Marker code ... */}
-    </Marker>
-))}
+
   useEffect(() => {
     if (!user) return;
 
@@ -83,17 +78,31 @@ export default function GlobalExplorersMap() {
       {/* 1. Left Sidebar - Explorers List (Above Zoom) */}
       <div className="absolute top-24 left-6 z-[1000] w-64 max-h-[60vh] flex flex-col gap-4 pointer-events-none">
         <div className="bg-[#0a0c10]/80 backdrop-blur-2xl border border-white/10 p-5 rounded-[2.5rem] shadow-2xl pointer-events-auto overflow-hidden flex flex-col">
-          <h2 className="text-[#3390ec] font-black italic text-[10px] tracking-[0.3em] uppercase mb-4 px-2">Explorers Nearby</h2>
-          <div className="overflow-y-auto space-y-3 pr-2 custom-scrollbar">
-            {explorers.map((exp) => (
-              <div key={exp._id} className="flex items-center gap-3 p-2 hover:bg-white/5 rounded-2xl transition-all group">
-                <div className="w-8 h-8 rounded-xl border border-[#3390ec]/30 overflow-hidden">
-                  <img src={exp.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${exp.username}`} className="w-full h-full object-cover" />
-                </div>
-                <span className="text-[11px] font-bold text-slate-300 group-hover:text-white transition-colors">{exp.username}</span>
-              </div>
-            ))}
+          <div className="flex items-center justify-between mb-4 px-2">
+            <h2 className="text-[#3390ec] font-black italic text-[10px] tracking-[0.3em] uppercase">Explorers Nearby</h2>
+            <button 
+              onClick={() => setShowExplorersPanel(!showExplorersPanel)} 
+              className="text-slate-500 hover:text-[#3390ec] transition-colors"
+            >
+              {showExplorersPanel ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+              )}
+            </button>
           </div>
+          {showExplorersPanel && (
+            <div className="overflow-y-auto space-y-3 pr-2 custom-scrollbar">
+              {explorers.map((exp) => (
+                <div key={exp._id} className="flex items-center gap-3 p-2 hover:bg-white/5 rounded-2xl transition-all group">
+                  <div className="w-8 h-8 rounded-xl border border-[#3390ec]/30 overflow-hidden">
+                    <img src={exp.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${exp.username}`} className="w-full h-full object-cover" />
+                  </div>
+                  <span className="text-[11px] font-bold text-slate-300 group-hover:text-white transition-colors">{exp.username}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
